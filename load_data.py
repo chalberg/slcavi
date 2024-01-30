@@ -1,14 +1,3 @@
-# Purpose: Process data from National Weather Service (NWS) for use in ML prediction
-# Data Sources
-#   National Weather Service: https://www.weather.gov/wrh/climate?wfo=slc
-#   Climate Data Online: https://www.ncdc.noaa.gov/cdo-web/datasets
-#       - Alta station: https://www.ncei.noaa.gov/cdo-web/datasets/GHCND/stations/GHCND:USC00420072/detail
-# TO DO
-# 1) Load in CSV for one station (ALTA)
-# 2) Cleaning function for single day single station
-# 3) Load all winter days (Oct - Apr) in past 10 years
-# 4) Create Pytorch dataset from data
-
 import pandas as pd
 import numpy as np
 from datetime import date
@@ -31,6 +20,10 @@ def clean_uac_avalanche_data(df):
              'Trigger: additional info',
              'Region'], axis=1, inplace=True)
     
+    df.rename(columns={
+        'Buried - Partly':'Buried_partly',
+        'Buried - Fully':'Buried_fully'}, inplace=True)
+    
     df['Date'] = pd.to_datetime(df['Date'])
 
     # convert coordinates to float columns
@@ -49,9 +42,9 @@ def clean_uac_avalanche_data(df):
     one_hot = lambda x: x.astype(int)
     #regions = pd.get_dummies(df['Region'].str.replace(" ", "").str.strip(), prefix='region').apply(one_hot)
     #places = pd.get_dummies(df['Place'].str.replace(" ", "").str.strip(), prefix='place').apply(one_hot)
-    trigger = pd.get_dummies(df['Trigger'].str.replace(" ", "").str.strip(), prefix='trigger').apply(one_hot)
+    trigger = pd.get_dummies(df['Trigger'].str.replace(" ", "").str.replace(" ",""), prefix='trigger').apply(one_hot)
     aspect = pd.get_dummies(df['Aspect'], prefix='aspect').apply(one_hot)
-    layer = pd.get_dummies(df["Weak Layer"].str.replace("/", "").str.strip(), prefix='layer').apply(one_hot)
+    layer = pd.get_dummies(df["Weak Layer"].str.replace("/", "").str.replace(" ",""), prefix='layer').apply(one_hot)
     df = pd.concat([df, trigger, aspect, layer], axis=1)
     df.drop(['Trigger', 'Aspect', 'Weak Layer'], axis=1, inplace=True)
     
@@ -64,6 +57,7 @@ def clean_noaa_daily_data():
 
     # rename columns
     df.rename(columns={'NAME': 'Name',
+                       'STATION': 'Station',
                        'LATITUDE': 'Latitude',
                        'LONGITUDE': 'Longitude',
                        'ELEVATION': 'Elevation',
@@ -73,7 +67,10 @@ def clean_noaa_daily_data():
                        'SNWD': 'Snow_depth',
                        'TMAX': 'Temp_max',
                        'TMIN': 'Temp_min',
+                       'TAVG': 'Temp_avg',
                        'TOBS': 'Temp_OBS',
+                       'WESD': 'Water_equiv_GroundSnow',
+                       'WESF': 'Water_equiv_snowfall',
                        'WT01': 'Fog',
                        'WT03': 'Thunder',
                        'WT04': 'Sleet',
@@ -83,7 +80,7 @@ def clean_noaa_daily_data():
     
     df['Date'] = [date.fromisoformat(d) for d in df['Date']] # convert str --> datetime
 
-    # create "WNTR" variable to label winter season
+    # create "WNTR" variable to label winter season (Oct 1st - May 5th)
     wntrs = {
         '16_17': (date(2016, 10, 1), date(2017, 5, 30)),
         '17_18': (date(2017, 10, 1), date(2018, 5, 30)),
@@ -100,20 +97,3 @@ def clean_noaa_daily_data():
         default = "")
 
     return df
-
-#def combine_noaa_data():
-#    stations_dict = get_stations_dict()
-#    dfs = []
-#    for df in stations_dict.values():
-#        dfs.append(clean_noaa_daily_data(df))
-#
-#    return pd.concat(dfs, ignore_index=True)
-#
-#def get_stations_dict() -> dict:
-#    # separate csv by site into dict of individual dataframes
-#    df = pd.read_csv('data/noaa_wasatch_daily.csv')
-#    stations_dict = {}
-#    for name in df['NAME'].unique():
-#        stations_dict[name] = df.loc[df['NAME'] == name]
-#
-#    return stations_dict
