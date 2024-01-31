@@ -1,14 +1,23 @@
 import pandas as pd
 import numpy as np
+import matplotlib.colors as mcolors
 from datetime import date
 
 __all__ = ['clean_uac_avalanche_data',
-           'clean_noaa_daily_data']
+           'clean_noaa_daily_data',
+           'get_colormap']
 
-def clean_uac_avalanche_data(df):
-    # filter for salt lake regions only
-    df = df.loc[df['Region'] == 'Salt Lake']
-    
+def clean_uac_avalanche_data():
+    df = pd.read_csv('data/avalanches.csv')
+
+    df = df.loc[df['Region'] == 'Salt Lake'] # filter for salt lake regions only
+
+    # Remove spaces from strings and fill na with "Unknown"
+    df[['Weak Layer', 'Trigger', 'Aspect']] = df[['Weak Layer', 'Trigger', 'Aspect']].fillna(value='Unknown')
+    str_cols = ['Weak Layer', 'Trigger', 'Aspect', 'Region', 'Place', 'Depth', 'Width', 'Vertical', 'Elevation']
+    for col in str_cols:
+        df[col] = df[col].str.replace(" ","").str.replace("/","").str.replace('"',"").str.replace(",","").str.replace("'","")
+
     # drop unnecessary columns
     df.drop(columns = [
         'Comments 1',
@@ -32,22 +41,23 @@ def clean_uac_avalanche_data(df):
     df['Latitude'] = pd.to_numeric(df['Latitude'])
     df['Longitude'] = pd.to_numeric(df['Longitude'])
     df.drop('Coordinates', axis=1, inplace=True)
+    df = df.dropna(subset=['Latitude', 'Longitude'], axis=0) # drop events that don't have a lat, long location
+
 
     # convert to numeric
-    df['Avi_depth'] = pd.to_numeric(df['Depth'].str.replace('"', "").str.replace("'", "").str.strip())
-    df['Avi_width'] = pd.to_numeric(df['Width'].str.replace('"', "").str.replace("'", "").str.replace(",", "").str.strip())
-    df['Avi_vertical'] = pd.to_numeric(df['Vertical'].str.replace('"', "").str.replace("'", "").str.replace(",", "").str.strip())
-    df['Elevation'] = pd.to_numeric(df['Elevation'].str.replace(',','').str.replace("'", "").str.strip())
+    df['Avi_depth'] = pd.to_numeric(df['Depth'])
+    df['Avi_width'] = pd.to_numeric(df['Width'])
+    df['Avi_vertical'] = pd.to_numeric(df['Vertical'])
+    df['Elevation'] = pd.to_numeric(df['Elevation'])
 
     # one-hot encodings
     one_hot = lambda x: x.astype(int)
-    #regions = pd.get_dummies(df['Region'].str.replace(" ", "").str.strip(), prefix='region').apply(one_hot)
-    #places = pd.get_dummies(df['Place'].str.replace(" ", "").str.strip(), prefix='place').apply(one_hot)
-    trigger = pd.get_dummies(df['Trigger'].str.replace(" ", "").str.replace(" ",""), prefix='trigger').apply(one_hot)
-    aspect = pd.get_dummies(df['Aspect'], prefix='aspect').apply(one_hot)
-    layer = pd.get_dummies(df["Weak Layer"].str.replace("/", "").str.replace(" ",""), prefix='layer').apply(one_hot)
+    #regions = pd.get_dummies(df['Region'], prefix='region').apply(one_hot)
+    #places = pd.get_dummies(df['Place'], prefix='place').apply(one_hot)
+    trigger = pd.get_dummies(df['Trigger'], prefix='Trigger').apply(one_hot)
+    aspect = pd.get_dummies(df['Aspect'], prefix='Aspect').apply(one_hot)
+    layer = pd.get_dummies(df["Weak Layer"], prefix='Layer').apply(one_hot)
     df = pd.concat([df, trigger, aspect, layer], axis=1)
-    df.drop(['Trigger', 'Aspect', 'Weak Layer'], axis=1, inplace=True)
     
     return df
 
@@ -92,9 +102,54 @@ def clean_noaa_daily_data():
         '22_23': (date(2022, 10, 1), date(2023, 5, 30)),
         '23_24': (date(2023, 10, 1), date(2024, 5, 30))
     }
+
     df['WNTR'] = np.select(
         [((df['Date'] >= start) & (df['Date'] <= end)) for start, end in wntrs.values()],
         list(wntrs.keys()),
         default = "")
 
     return df
+
+def noaa_to_ts(df):
+    # returns dict of dfs coresponding to each station
+
+    df_dict = {}
+    for station in df['Name'].unique():
+        station_df = df.loc[df['Station'] == station]
+        station_df = station_df.sort_values(by='Date')
+        station_df.set_index('Date')
+        df_dict[station] = station_df
+
+    return df_dict
+
+def uac_to_ts(df):
+    # returns dict of dfs corresponding to each station
+    df.drop(['Trigger', 'Aspect', 'Weak Layer'], axis=1, inplace=True)
+
+def get_colormap(map_type):
+    if map_type not in {"trigger", "layer"}:
+        raise ValueError("Color map must be either 'trigger' or 'layer'")
+    
+    if map_type == "trigger":
+        color_map = {
+            'Explosive': mcolors.TABLEAU_COLORS['tab:brown'],
+            'Hiker': mcolors.TABLEAU_COLORS['tab:olive'],
+            'Natural': mcolors.TABLEAU_COLORS['tab:green'],
+            'Skier': mcolors.TABLEAU_COLORS['tab:red'],
+            'SnowBike': mcolors.TABLEAU_COLORS['tab:red'],
+            'Snowboarder': mcolors.TABLEAU_COLORS['tab:red'],
+            'Snowmobiler': mcolors.TABLEAU_COLORS['tab:orange'],
+            'Snowshoer': mcolors.TABLEAU_COLORS['tab:olive'],
+            'Unknown':mcolors.TABLEAU_COLORS['tab:gray'],
+            'Unknown': mcolors.TABLEAU_COLORS['tab:gray']
+            }
+    
+    if map_type == "layer":
+        layers = ['New Snow/Old Snow Interface', 'Facets', 'New Snow',
+                  'Ground Interface', 'Surface Hoar', 'Depth Hoar',
+                  'Density Change', 'Graupel', 'Wet grains', 'Unknown']
+        mask = np.random.randint(low=0, high=len(mcolors.XKCD_COLORS.values()), size=len(layers))
+        colors = [list(mcolors.XKCD_COLORS.values())[i] for i in mask]
+        color_map = dict(zip(layers, colors))
+
+    return color_map 
