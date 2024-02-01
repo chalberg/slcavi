@@ -32,9 +32,10 @@ def clean_uac_avalanche_data():
         'Buried - Partly':'Buried_partly',
         'Buried - Fully':'Buried_fully',
         'Trigger: additional info': 'Trigger_info',
-        'Terrain Summary': 'Terrain_summary'}, inplace=True)
+        'Terrain Summary': 'Terrain_summary',
+        'Weak Layer': 'WeakLayer'}, inplace=True)
     
-    df['Date'] = pd.to_datetime(df['Date']).dt.floor('H')
+    df['Date'] = pd.to_datetime(df['Date']).dt.floor('D')
 
     # convert coordinates to float columns
     df[['Latitude', 'Longitude']] = df['Coordinates'].str.split(',', expand=True)
@@ -56,7 +57,7 @@ def clean_uac_avalanche_data():
     #places = pd.get_dummies(df['Place'], prefix='place').apply(one_hot)
     trigger = pd.get_dummies(df['Trigger'], prefix='Trigger').apply(one_hot)
     aspect = pd.get_dummies(df['Aspect'], prefix='Aspect').apply(one_hot)
-    layer = pd.get_dummies(df["Weak Layer"], prefix='Layer').apply(one_hot)
+    layer = pd.get_dummies(df["WeakLayer"], prefix='Layer').apply(one_hot)
     df = pd.concat([df, trigger, aspect, layer], axis=1)
 
     # create avalanche volume approximation

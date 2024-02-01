@@ -65,9 +65,23 @@ def get_avalanche_map(marker_type):
         cmap = get_colormap(marker_type)
         if marker_type == "trigger":
             color = str("map_marker_icon_") + str(cmap[event['Trigger']])
+            popup = """
+                Place: {}
+                Date: {}
+                Trigger: {}
+                Terrain Summary: {}
+                Additional info: {}
+                """.format(event['Place'], event['Date'], event['Trigger'], event['Terrain_summary'], event['Trigger_info'])
 
         if marker_type == 'layer':
-            color = str("map_marker_icon_") + str(cmap[event['Layer']])
+            color = str("map_marker_icon_") + str(cmap[event['WeakLayer']])
+            popup = """
+                    Place: {}
+                    Date: {}
+                    Weak Layer: {}
+                    Terrain Summary: {}
+                    Additional Info: {}
+                    """.format(event['Place'], event['Date'], event['WeakLayer'],event['Terrain_summary'], event['Trigger_info'])
 
         image = "assets/map_marker/{}.png".format(color)
 
@@ -84,13 +98,6 @@ def get_avalanche_map(marker_type):
             size = [aspect_ratio*20, 20]
 
         icon = folium.CustomIcon(image, icon_size=size)
-        popup = """
-                Place: {}
-                Date: {}
-                Trigger: {}
-                Terrain Summary: {}
-                Additional info: {}
-                """.format(event['Place'], event['Date'], event['Trigger'], event['Terrain_summary'], event['Trigger_info'])
 
         folium.Marker(
             location=[event['Latitude'], event['Longitude']],
