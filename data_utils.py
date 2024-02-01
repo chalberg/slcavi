@@ -1,11 +1,11 @@
 import pandas as pd
 import numpy as np
 import matplotlib.colors as mcolors
+import folium
 from datetime import date
 
 __all__ = ['clean_uac_avalanche_data',
-           'clean_noaa_daily_data',
-           'get_colormap']
+           'clean_noaa_daily_data']
 
 def clean_uac_avalanche_data():
     df = pd.read_csv('data/avalanches.csv')
@@ -14,7 +14,7 @@ def clean_uac_avalanche_data():
 
     # Remove spaces from strings and fill na with "Unknown"
     df[['Weak Layer', 'Trigger', 'Aspect']] = df[['Weak Layer', 'Trigger', 'Aspect']].fillna(value='Unknown')
-    str_cols = ['Weak Layer', 'Trigger', 'Aspect', 'Region', 'Place', 'Depth', 'Width', 'Vertical', 'Elevation']
+    str_cols = ['Weak Layer', 'Trigger', 'Aspect', 'Region', 'Depth', 'Width', 'Vertical', 'Elevation']
     for col in str_cols:
         df[col] = df[col].str.replace(" ","").str.replace("/","").str.replace('"',"").str.replace(",","").str.replace("'","")
 
@@ -25,16 +25,16 @@ def clean_uac_avalanche_data():
         'Comments 3',
         'Comments 4',
         'Weather Conditions and History',
-        'Terrain Summary',
         'Accident and Rescue Summary',
-        'Trigger: additional info',
         'Region'], axis=1, inplace=True)
     
     df.rename(columns={
         'Buried - Partly':'Buried_partly',
-        'Buried - Fully':'Buried_fully'}, inplace=True)
+        'Buried - Fully':'Buried_fully',
+        'Trigger: additional info': 'Trigger_info',
+        'Terrain Summary': 'Terrain_summary'}, inplace=True)
     
-    df['Date'] = pd.to_datetime(df['Date'])
+    df['Date'] = pd.to_datetime(df['Date']).dt.floor('H')
 
     # convert coordinates to float columns
     df[['Latitude', 'Longitude']] = df['Coordinates'].str.split(',', expand=True)
@@ -58,6 +58,14 @@ def clean_uac_avalanche_data():
     aspect = pd.get_dummies(df['Aspect'], prefix='Aspect').apply(one_hot)
     layer = pd.get_dummies(df["Weak Layer"], prefix='Layer').apply(one_hot)
     df = pd.concat([df, trigger, aspect, layer], axis=1)
+
+    # create avalanche volume approximation
+    df['Avi_volume'] = df['Avi_depth'] * df['Avi_width'] * df['Avi_vertical']
+    df['Avi_volume'] = df['Avi_volume'].fillna("Unknown")
+
+    # fill NA
+    df['Trigger_info'] = df['Trigger_info'].fillna('NA')
+    df['Terrain_summary'] = df['Terrain_summary'].fillna('NA')
     
     return df
 
@@ -125,31 +133,3 @@ def noaa_to_ts(df):
 def uac_to_ts(df):
     # returns dict of dfs corresponding to each station
     df.drop(['Trigger', 'Aspect', 'Weak Layer'], axis=1, inplace=True)
-
-def get_colormap(map_type):
-    if map_type not in {"trigger", "layer"}:
-        raise ValueError("Color map must be either 'trigger' or 'layer'")
-    
-    if map_type == "trigger":
-        color_map = {
-            'Explosive': mcolors.TABLEAU_COLORS['tab:brown'],
-            'Hiker': mcolors.TABLEAU_COLORS['tab:olive'],
-            'Natural': mcolors.TABLEAU_COLORS['tab:green'],
-            'Skier': mcolors.TABLEAU_COLORS['tab:red'],
-            'SnowBike': mcolors.TABLEAU_COLORS['tab:red'],
-            'Snowboarder': mcolors.TABLEAU_COLORS['tab:red'],
-            'Snowmobiler': mcolors.TABLEAU_COLORS['tab:orange'],
-            'Snowshoer': mcolors.TABLEAU_COLORS['tab:olive'],
-            'Unknown':mcolors.TABLEAU_COLORS['tab:gray'],
-            'Unknown': mcolors.TABLEAU_COLORS['tab:gray']
-            }
-    
-    if map_type == "layer":
-        layers = ['New Snow/Old Snow Interface', 'Facets', 'New Snow',
-                  'Ground Interface', 'Surface Hoar', 'Depth Hoar',
-                  'Density Change', 'Graupel', 'Wet grains', 'Unknown']
-        mask = np.random.randint(low=0, high=len(mcolors.XKCD_COLORS.values()), size=len(layers))
-        colors = [list(mcolors.XKCD_COLORS.values())[i] for i in mask]
-        color_map = dict(zip(layers, colors))
-
-    return color_map 
