@@ -50,7 +50,7 @@ def get_avalanche_map(marker_type):
     avi_vols = df.loc[mask, 'Avi_volume'].values.reshape(-1, 1)
     scaler = MinMaxScaler().fit(avi_vols)
     scaled_vols = scaler.transform(avi_vols)
-    vols_dict = dict(zip(mask, scaled_vols))
+    vols_dict = {idx: value[0] for idx, value in zip(mask, scaled_vols)}
 
     # initilize map
     map_lat = df['Latitude'][0]
@@ -69,23 +69,33 @@ def get_avalanche_map(marker_type):
         if marker_type == 'layer':
             color = str("map_marker_icon_") + str(cmap[event['Layer']])
 
-        image = "assets/map_markers/{}.png".format(color)
+        image = "assets/map_marker/{}.png".format(color)
 
         # size scaled to volume of avalanche
         aspect_ratio = 0.78
         if event['Avi_volume'] != "Unknown":
-            h = np.sqrt(vols_dict[idx] / aspect_ratio)
+            h = np.sqrt(vols_dict[idx] / aspect_ratio) * 20
             w = aspect_ratio * h
-            size = [w, h]
+            if h >= 20: # min size; othewise some icons will barely be visible
+                size = [w, h]
+            else: 
+                size = [aspect_ratio*20, 20]
         else:
-            size = [aspect_ratio*0.5, 0.5]
+            size = [aspect_ratio*20, 20]
 
         icon = folium.CustomIcon(image, icon_size=size)
+        popup = """
+                Place: {}
+                Date: {}
+                Trigger: {}
+                Terrain Summary: {}
+                Additional info: {}
+                """.format(event['Place'], event['Date'], event['Trigger'], event['Terrain_summary'], event['Trigger_info'])
 
         folium.Marker(
             location=[event['Latitude'], event['Longitude']],
-            popup= event['Place'] + ", " + str(event['Date']),
+            popup= popup,
             icon=icon
-        ).add_to(m)
+            ).add_to(m)
 
     return m
