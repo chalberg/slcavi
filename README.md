@@ -12,7 +12,7 @@ Exploration of avalanches in the Wasatch mountains using historical avalanche an
 
 ## About <a name="about"></a>
 
-This project is focused on providing information about avalanches in the Wasatch range. So far, I have created an interactive disply which can be accessed here.
+This project is focused on providing information about avalanches in the Wasatch range. So far, I have created an interactive disply which can be recreated using the notebook provided below.
 
 [Interactive Map with weak layer info](assets/maps/avi_map_layer.html)
 ![layer_map](assets/maps/avi_map_layer.png)
@@ -32,7 +32,7 @@ $ pip install -r requirements.txt
 
 ## Usage <a name="usage"></a>
 
-
+To generate the interactive maps pictured above, see the [example](example.ipynb) jupyter notebook.
 
 ## Contributing <a name="contributing"></a>
 
