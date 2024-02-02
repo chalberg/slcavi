@@ -1,10 +1,12 @@
 import folium
-import pandas as pd
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from data_utils import *
+from argparse import ArgumentParser
 
 __all__ = ['get_avalanche_map']
+
+__name__=="__main__"
 
 def get_colormap(marker_type):
     if marker_type not in {"trigger", "layer"}:
@@ -106,3 +108,22 @@ def get_avalanche_map(marker_type):
             ).add_to(m)
 
     return m
+
+def save_map_assets(save):
+    
+    if save:
+        # saves folium maps as .html files
+        layer_map = get_avalanche_map('layer')
+        layer_map.save('static/assets/maps/avi_map_layer.html')
+
+        trigger_map = get_avalanche_map('trigger')
+        trigger_map.save('static/assets/maps/avi_map_trigger.html')
+
+if __name__=="__main__":
+    parser = ArgumentParser()
+
+    parser.add_argument('save_files', default=True)
+
+    args = parser.parse_args()
+
+    save_map_assets(args.save_files)
