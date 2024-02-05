@@ -81,42 +81,45 @@ def get_avalanche_map():
                 size = [aspect_ratio*20, 20]
         else:
             size = [aspect_ratio*20, 20]
-        
-        # create trigger marker
-        color = str("map_marker_icon_") + str(trigger_cmap[event['Trigger']])
-        popup = """
-            Place: {}
-            Date: {}
-            Trigger: {}
-            Terrain Summary: {}
-            Additional info: {}
-            """.format(event['Place'], event['Date'], event['Trigger'], event['Terrain_summary'], event['Trigger_info'])
-        image = "static/assets/map_marker/{}.png".format(color)
-        icon = folium.CustomIcon(image, icon_size=size)
 
-        folium.Marker(
-            location=[event['Latitude'], event['Longitude']],
-            popup= popup,
-            icon=icon
-            ).add_to(trigger_group)
-        
-        # create layer marker
-        color = str("map_marker_icon_") + str(layer_cmap[event['WeakLayer']])
-        popup = """
+        if event['Trigger'] != "Unknown":
+
+            # create trigger marker
+            color = str("map_marker_icon_") + str(trigger_cmap[event['Trigger']])
+            popup = """
                 Place: {}
                 Date: {}
-                Weak Layer: {}
+                Trigger: {}
                 Terrain Summary: {}
-                Additional Info: {}
-                """.format(event['Place'], event['Date'], event['WeakLayer'],event['Terrain_summary'], event['Trigger_info'])
-        image = "static/assets/map_marker/{}.png".format(color)
-        icon = folium.CustomIcon(image, icon_size=size)
+                Additional info: {}
+                """.format(event['Place'], event['Date'], event['Trigger'], event['Terrain_summary'], event['Trigger_info'])
+            image = "static/assets/map_marker/{}.png".format(color)
+            icon = folium.CustomIcon(image, icon_size=size)
 
-        folium.Marker(
-            location=[event['Latitude'], event['Longitude']],
-            popup= popup,
-            icon=icon
-            ).add_to(layer_group)
+            folium.Marker(
+                location=[event['Latitude'], event['Longitude']],
+                popup= popup,
+                icon=icon
+                ).add_to(trigger_group)
+            
+        if event['WeakLayer'] != "Unknown":
+            # create layer marker
+            color = str("map_marker_icon_") + str(layer_cmap[event['WeakLayer']])
+            popup = """
+                    Place: {}
+                    Date: {}
+                    Weak Layer: {}
+                    Terrain Summary: {}
+                    Additional Info: {}
+                    """.format(event['Place'], event['Date'], event['WeakLayer'],event['Terrain_summary'], event['Trigger_info'])
+            image = "static/assets/map_marker/{}.png".format(color)
+            icon = folium.CustomIcon(image, icon_size=size)
+
+            folium.Marker(
+                location=[event['Latitude'], event['Longitude']],
+                popup= popup,
+                icon=icon
+                ).add_to(layer_group)
         
     layer_group.add_to(m)
     trigger_group.add_to(m)
@@ -127,7 +130,7 @@ def get_avalanche_map():
 def save_map_assets():
     uac_map = get_avalanche_map()
     uac_map.save('templates/avi_map.html')
-    
+
 if __name__=="__main__":
     parser = ArgumentParser()
 
