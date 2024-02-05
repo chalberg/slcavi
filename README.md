@@ -2,6 +2,7 @@
 
 Exploration of avalanches in the Wasatch mountains using historical avalanche and climate data.
 
+---
 ## Table of Contents
 
 - [About](#about)
@@ -10,34 +11,47 @@ Exploration of avalanches in the Wasatch mountains using historical avalanche an
 - [Contributing](#contributing)
 - [Liscense](#liscense)
 
+---
 ## About <a name="about"></a>
 
-This project is focused on providing information about avalanches in the Wasatch range. So far, I have created an interactive disply which can be recreated using the notebook provided below.
+This project is focused on providing information about avalanches in the Wasatch range. The main feature of this respository is an interactive map displaying avalanche incidents and additional information about the event.
 
-[Interactive Map with weak layer info](assets/maps/avi_map_layer.html)
-![layer_map](assets/maps/avi_map_layer.png)
+![Avalanche Map (screenshot)](assets/maps/avi_map.png)
 
-[Interactive Map with avalanche trigger info](assets/maps/avi_map_trigger.html)
-![trigger_map](assets/maps/avi_map_trigger.png)
-
+---
 ## Getting Started <a name="getting-started"></a>
 
 Download this repository using the following commands:
-
 ```bash
 $ git clone https://github.com/chalberg/slcavi.git
 $ cd slcavi
 $ pip install -r requirements.txt
 ```
-
+---
 ## Usage <a name="usage"></a>
 
-To generate the interactive maps pictured above, see the [example](example.ipynb) jupyter notebook.
+**Launching the App**
+The main feature of this repository is a web app which displays an interactive map of avalanche incidents in the Wasatch mountains. To launch the app, ensure you have all the requirements installed and run the following commands:
+```bash
+$ cd slcavi
+$ python app.py
+```
+This will launch the app and generate some text, including the following link:
+```
+* Running on http://127.0.0.1:5000
+```
+Paste this link into your brower to access the app.
 
+**Generating the Map**
+To generate the interactive map pictured above, navigate to this directory and run the following command:
+```bash
+$ python visualizations.py --save
+```
+---
 ## Contributing <a name="contributing"></a>
 
 
-
+---
 ## Liscense <a name="liscense"></a>
 
 MIT License
