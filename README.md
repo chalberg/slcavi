@@ -16,7 +16,7 @@ Exploration of avalanches in the Wasatch mountains using historical avalanche an
 
 This project is focused on providing information about avalanches in the Wasatch range. The main feature of this respository is an interactive map displaying avalanche incidents and additional information about the event.
 
-![Avalanche Map (screenshot)](assets/maps/avi_map.png)
+![Avalanche Map (screenshot)](static/assets/maps/avi_map.png)
 
 ---
 ## Getting Started <a name="getting-started"></a>
