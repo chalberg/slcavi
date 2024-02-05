@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en"\>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="UTF-8"/>
+        <title>{% block title%} Avalanches in the Wasatch Mountains {% endblock %}</title>
+        <!-- style sheets -->
+    </head>
+    <body>
+
+        <!-- navigation bar -->
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('avi_map_trigger') }}">Avalanche Map: Trigger</a></li>
+                <li><a href="{{ url_for('avi_map_layer') }}">Avalanche Map: Layer</a></li>
+                <!-- Add more links as needed -->
+            </ul>
+        </nav>
+        
+        {% block content %}{% endblock %}
+    </body>
+</html>
