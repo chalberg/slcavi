@@ -4,18 +4,22 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta charset="UTF-8"/>
         <title>{% block title%} Avalanches in the Wasatch Mountains {% endblock %}</title>
+        
         <!-- style sheets -->
+        <link rel="stylesheet" href="static/styles.css">
     </head>
     <body>
 
         <!-- navigation bar -->
-        <nav>
+        <div id="nav_background">
+        <nav id="nav_bar">
             <ul>
                 <li><a href="{{ url_for('index') }}">Home</a></li>
                 <li><a href="{{ url_for('avi_map') }}">Interactive Avalanche Map</a></li>
-                <!-- Add more links as needed -->
             </ul>
+            </div>
         </nav>
+        </div>
         
         {% block content %}{% endblock %}
     </body>
