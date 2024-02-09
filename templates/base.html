@@ -9,18 +9,16 @@
         <link rel="stylesheet" href="static/styles.css">
     </head>
     <body>
-
         <!-- navigation bar -->
-        <div id="nav_background">
-        <nav id="nav_bar">
+        <div class="nav_bar">
             <ul>
                 <li><a href="{{ url_for('index') }}">Home</a></li>
                 <li><a href="{{ url_for('avi_map') }}">Interactive Avalanche Map</a></li>
             </ul>
-            </div>
-        </nav>
         </div>
         
+        <!-- page body -->
         {% block content %}{% endblock %}
+
     </body>
 </html>
