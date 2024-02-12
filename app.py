@@ -6,6 +6,10 @@ app = Flask(__name__)
 def index():
     return render_template('index.html')
 
+@app.route('/avi_home')
+def avi_home():
+    return render_template('avi_home.html')
+
 @app.route('/avi_map')
 def avi_map():
     return render_template('avi_map.html')

@@ -1,9 +1,26 @@
-{% extends 'base.html' %}
+<!DOCTYPE html>
+<html lang="en"\>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="UTF-8"/>
+        
+        <!-- style sheets -->
+        <link rel="stylesheet" href="static/styles.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Playfair+Display:500,i,bi,b">
 
-{% block content %}
+        <title>SLC Avi</title>
+    </head>
+    <body>
+        <!-- navigation bar -->
+        <div class="nav_bar">
+            <ul>
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('avi_home') }}">Interactive Avalanche Map</a></li>
+            </ul>
+        </div>
+        
+        <!-- page body -->
+        <h1>Exploring Avalanches in the Wasatch Mountains</h1>
 
-{% block title %} Avalanches in the Wasatch Mountains {% endblock %}
-
-<p>Hello World!</p>
-
-{% endblock %}
+    </body>
+</html>

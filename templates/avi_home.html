@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en"\>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta charset="UTF-8"/>
+        
+        <!-- style sheets -->
+        <link rel="stylesheet" href="static/styles.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Playfair+Display:500,i,bi,b">
+
+        <title>Avi Map</title>
+    </head>
+    <body>
+        <!-- navigation bar -->
+        <div class="nav_bar">
+            <ul>
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('avi_home') }}">Interactive Avalanche Map</a></li>
+            </ul>
+        </div>
+        
+        <!-- page body -->
+        <h1 class="heading_1">Interactive Map of Avalanches in the Wasatch Mountains</h1>
+        <div class="interactive_map">
+            <iframe src="{{ url_for('avi_map') }}"></iframe>
+        </div>
+
+        <!-- Map description -->
+        <h2>Map Usage</h2>
+        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Saepe neque facilis vel in recusandae, earum laborum sequi eveniet quisquam. Et praesentium incidunt, vel iusto mollitia temporibus minima dicta exercitationem veniam.</p>
+
+        <h2>Additional Info</h2>
+        <p>Lorem ipsum, dolor sit amet consectetur adipisicing elit. Officia deleniti, quisquam rem necessitatibus nulla numquam ullam totam distinctio qui vero earum doloremque eius exercitationem cumque repudiandae dignissimos. Cum, alias pariatur.</p>
+
+    </body>
+</html>
