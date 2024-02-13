@@ -1,14 +1,21 @@
 import pandas as pd
 import numpy as np
-import matplotlib.colors as mcolors
-import folium
+import requests
+from bs4 import BeautifulSoup
+from PIL import Image
+from io import BytesIO
+from datetime import datetime
 from datetime import date
+from tqdm import tqdm
+import time
 
 __all__ = ['clean_uac_avalanche_data',
-           'clean_noaa_daily_data']
+           'clean_noaa_daily_data',
+           'uac_to_ts',
+           'get_uac_forecast']
 
-def clean_uac_avalanche_data():
-    df = pd.read_csv('data/avalanches.csv')
+def clean_uac_avalanche_data(data):
+    df = data # avalanches.csv
 
     df = df.loc[df['Region'] == 'Salt Lake'] # filter for salt lake regions only
 
@@ -120,8 +127,8 @@ def clean_noaa_daily_data():
     return df
 
 def noaa_to_ts(df):
-    # returns dict of dfs coresponding to each station
 
+    # create column duplicates for each station, single dataframe with common date index
     df_dict = {}
     for station in df['Name'].unique():
         station_df = df.loc[df['Station'] == station]
@@ -132,5 +139,100 @@ def noaa_to_ts(df):
     return df_dict
 
 def uac_to_ts(df):
-    # returns dict of dfs corresponding to each station
-    df.drop(['Trigger', 'Aspect', 'Weak Layer'], axis=1, inplace=True)
+    
+    return df
+
+def get_uac_forecast():
+
+    aspect_px_dict = {
+        'L_N': (200, 75),
+        'L_NE': (285, 95),
+        'L_E': (320, 175),
+        'L_SE': (290, 250),
+        'L_S': (200, 290),
+        'L_SW': (110, 255),
+        'L_W': (85, 175),
+        'L_NW': (110, 100),
+        'M_N': (200, 100),
+        'M_NW': (150, 120),
+        'M_W': (130, 170),
+        'M_SW': (150, 220),
+        'M_S': (200, 230),
+        'M_SE': (250, 220),
+        'M_E': (275, 170),
+        'M_NE': (250, 120),
+        'H_N': (200, 135),
+        'H_NW': (175, 135),
+        'H_W': (168, 155),
+        'H_SW': (178, 178),
+        'H_S': (200, 185),
+        'H_SE': (225, 175),
+        'H_E': (235, 155),
+        'H_NE': (225, 135) 
+    }
+
+    rgb_danger_dict = {
+        (80, 184, 72, 255): 1,
+        (255, 242, 0, 255): 2,
+        (247, 148, 30, 255): 3,
+        (237, 28, 36, 255): 4,
+        (0, 0, 0, 255): 5
+    }
+
+    # scrape available dates from UAC page
+    urls = []
+    dates = []
+    for i in range(18): # num pages hard-coded for now
+        time.sleep(0.5)
+        if i == 0:
+            date_url = 'https://utahavalanchecenter.org/archives/forecasts/salt-lake'
+        else:
+            date_url = 'https://utahavalanchecenter.org/archives/forecasts/salt-lake?page='+str(i)
+        
+        response = requests.get(date_url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        for td in soup.find_all('td', class_='views-field views-field-title'):
+            a_tag = td.find('a')
+            if a_tag:
+                href = a_tag['href']
+                date_str = href.split('salt-lake/')[1]
+                url = 'https://utahavalanchecenter.org/forecast/salt-lake/'+str(date_str)
+                urls.append(url)
+
+                # clean and save dates
+                if '-' in date_str:
+                    date_str = date_str.split('-')[0]
+
+                dates.append(datetime.strptime(date_str, "%m/%d/%Y"))
+    
+    # initialize df
+    df = pd.DataFrame(index = dates, columns = aspect_px_dict.keys())
+    for idx, url in tqdm(enumerate(urls)):
+        time.sleep(0.25) # 0.25 second delay
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        image_tag = soup.find('img', class_='full-width compass-width sm-pb3')
+
+        if image_tag and 'src' in image_tag.attrs:
+            image_url = 'http://utahavalanchecenter.org'+str(image_tag['src'])
+            image_response = requests.get(image_url)
+
+            # open image w/o saving to disk
+            with Image.open(BytesIO(image_response.content)) as img:
+                for k in aspect_px_dict.keys():
+                   # get rgb val, map to danger level
+                   rgb = img.getpixel(aspect_px_dict[k])
+                   danger = rgb_danger_dict.get(rgb)
+                   df.at[dates[idx], k] = danger
+        else:
+            print("Image not found or URL not provided in 'src' attribute of the <img> tag.")
+        
+        if (idx % 50) == 0 and idx != 0:
+            print("Saving data ...")
+            df.to_csv('data/uac_forecasts.csv')
+    
+    print("Saving data ...")
+    print("Done!")
+    df.to_csv('data/uac_forecasts.csv')
+    return df
