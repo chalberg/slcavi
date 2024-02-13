@@ -1,0 +1,10 @@
+pandas
+numpy
+folium
+scikit-learn
+tqdm
+pillow
+beautifulsoup4
+time
+datetime
+argparse
