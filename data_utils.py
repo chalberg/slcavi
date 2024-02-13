@@ -172,17 +172,19 @@ def get_uac_forecast():
     }
 
     rgb_danger_dict = {
-        (80, 184, 72, 255): 1,
-        (255, 242, 0, 255): 2,
-        (247, 148, 30, 255): 3,
-        (237, 28, 36, 255): 4,
-        (0, 0, 0, 255): 5
+        (80, 184, 72, 255): 1, # green
+        (255, 242, 0, 255): 2, # yellow
+        (247, 148, 30, 255): 3, # orange
+        (237, 28, 36, 255): 4, # red
+        (0, 0, 0, 255): 5, # black
+        (192, 192, 192): 'NA' # grey
     }
 
     # scrape available dates from UAC page
     urls = []
     dates = []
-    for i in range(18): # num pages hard-coded for now
+    print("Preparing data sources ...")
+    for i in tqdm(range(18)): # num pages hard-coded for now
         time.sleep(0.5)
         if i == 0:
             date_url = 'https://utahavalanchecenter.org/archives/forecasts/salt-lake'
@@ -200,7 +202,6 @@ def get_uac_forecast():
                 url = 'https://utahavalanchecenter.org/forecast/salt-lake/'+str(date_str)
                 urls.append(url)
 
-                # clean and save dates
                 if '-' in date_str:
                     date_str = date_str.split('-')[0]
 
@@ -208,31 +209,75 @@ def get_uac_forecast():
     
     # initialize df
     df = pd.DataFrame(index = dates, columns = aspect_px_dict.keys())
-    for idx, url in tqdm(enumerate(urls)):
+    print("Fetching forecasts from 2018-present ...")
+    for idx in tqdm(range(len(urls))):
         time.sleep(0.25) # 0.25 second delay
-        response = requests.get(url)
+        response = requests.get(urls[idx], timeout=10)
         soup = BeautifulSoup(response.content, 'html.parser')
         image_tag = soup.find('img', class_='full-width compass-width sm-pb3')
 
         if image_tag and 'src' in image_tag.attrs:
             image_url = 'http://utahavalanchecenter.org'+str(image_tag['src'])
-            image_response = requests.get(image_url)
+            image_response = requests.get(image_url, timeout=10)
 
             # open image w/o saving to disk
             with Image.open(BytesIO(image_response.content)) as img:
                 for k in aspect_px_dict.keys():
-                   # get rgb val, map to danger level
-                   rgb = img.getpixel(aspect_px_dict[k])
-                   danger = rgb_danger_dict.get(rgb)
-                   df.at[dates[idx], k] = danger
+                    # get rgb val, map to danger level
+                    rgb = img.getpixel(aspect_px_dict[k])
+                    danger = rgb_danger_dict.get(rgb)
+                    df.at[dates[idx], k] = danger
         else:
             print("Image not found or URL not provided in 'src' attribute of the <img> tag.")
         
-        if (idx % 50) == 0 and idx != 0:
-            print("Saving data ...")
-            df.to_csv('data/uac_forecasts.csv')
+    df2 = uac_forecast_pre2018(aspect_px_dict)
+    df = pd.concat([df, df2])
     
-    print("Saving data ...")
-    print("Done!")
     df.to_csv('data/uac_forecasts.csv')
+    print("Done!")
+
+def uac_forecast_pre2018(px_dict):
+    rgb_danger_dict = {
+            (80, 184, 72): 1, # green
+            (255, 242, 0): 2, # yellow
+            (247, 148, 30): 3, # orange
+            (237, 28, 36): 4, # red
+            (0, 0, 0): 5, # black
+            (192, 192, 192): 'NA' # grey
+        }
+
+    base_url = 'https://utahavalanchecenter.org/archive/advisories/salt-lake'
+    response = requests.get(base_url, timeout=10)
+    soup = BeautifulSoup(response.content, 'html.parser')
+    d = soup.find('div', class_='text_02 body')
+
+    urls  = []
+    dates = []
+    for a in d.find_all('a'):
+        if int(a.text) > 20160801: # dates after 08/01/2016
+            url = 'https://utahavalanchecenter.org'+str(a['href'])
+            urls.append(url)
+            dates.append(datetime.strptime(a.text, "%Y%m%d"))
+
+    df = pd.DataFrame(index=dates, columns=px_dict.keys())
+
+    print("Fetching forecasts from 2016-2018 ...")
+    for idx in tqdm(range(len(urls))):
+        #time.sleep(0.25) # 0.25 second delay
+        response = requests.get(urls[idx], timeout=10)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        d = soup.find('div', id='problem-rose')
+        if d is not None:
+            img_tag = d.find_all('img')[1]
+            img_url = img_tag['src'].split('forecast/')[1]
+            img_url = 'https://utahavalanchecenter.org/sites/default/files/archive/advisory/print/sites/default/files/forecast/'+str(img_url)
+            img_response = requests.get(img_url, timeout=10)
+
+            # open w/o saving to disk
+            with Image.open(BytesIO(img_response.content)) as img:
+                for k in px_dict.keys():
+                    rgb = img.getpixel(px_dict[k])
+                    danger = rgb_danger_dict.get(rgb)
+                    df.at[dates[idx], k] = danger
+    
     return df
