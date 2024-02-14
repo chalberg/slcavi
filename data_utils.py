@@ -5,17 +5,17 @@ from bs4 import BeautifulSoup
 from PIL import Image
 from io import BytesIO
 from datetime import datetime
-from datetime import date
 from tqdm import tqdm
 import time
 
 __all__ = ['clean_uac_avalanche_data',
            'clean_noaa_daily_data',
            'uac_to_ts',
+           'noaa_to_ts',
            'get_uac_forecast']
 
-def clean_uac_avalanche_data(data):
-    df = data # avalanches.csv
+def clean_uac_avalanche_data():
+    df = pd.read_csv('data/avalanches.csv') # avalanches.csv
 
     df = df.loc[df['Region'] == 'Salt Lake'] # filter for salt lake regions only
 
@@ -60,8 +60,6 @@ def clean_uac_avalanche_data(data):
 
     # one-hot encodings
     one_hot = lambda x: x.astype(int)
-    #regions = pd.get_dummies(df['Region'], prefix='region').apply(one_hot)
-    #places = pd.get_dummies(df['Place'], prefix='place').apply(one_hot)
     trigger = pd.get_dummies(df['Trigger'], prefix='Trigger').apply(one_hot)
     aspect = pd.get_dummies(df['Aspect'], prefix='Aspect').apply(one_hot)
     layer = pd.get_dummies(df["WeakLayer"], prefix='Layer').apply(one_hot)
@@ -74,69 +72,100 @@ def clean_uac_avalanche_data(data):
     # fill NA
     df['Trigger_info'] = df['Trigger_info'].fillna('NA')
     df['Terrain_summary'] = df['Terrain_summary'].fillna('NA')
-    
     return df
 
 def clean_noaa_daily_data():
     df = pd.read_csv('data/noaa_wasatch_daily.csv')
 
     df = df.loc[df['SNWD'] != 0.0] # drop days with no snow depth
+    df.drop(columns=['STATION'], inplace=True)
 
     # rename columns
     df.rename(columns={'NAME': 'Name',
-                       'STATION': 'Station',
-                       'LATITUDE': 'Latitude',
-                       'LONGITUDE': 'Longitude',
-                       'ELEVATION': 'Elevation',
-                       'DATE': 'Date',
-                       'PRCP': 'Precip',
-                       'SNOW': 'Snow',
-                       'SNWD': 'Snow_depth',
-                       'TMAX': 'Temp_max',
-                       'TMIN': 'Temp_min',
-                       'TAVG': 'Temp_avg',
-                       'TOBS': 'Temp_OBS',
-                       'WESD': 'Water_equiv_GroundSnow',
-                       'WESF': 'Water_equiv_snowfall',
-                       'WT01': 'Fog',
-                       'WT03': 'Thunder',
-                       'WT04': 'Sleet',
-                       'WT05': 'Hail',
-                       'WT06': 'Rime',
-                       'WT11': 'High_winds'}, inplace=True)
+                       'LATITUDE': 'latitude',
+                       'LONGITUDE': 'longitude',
+                       'ELEVATION': 'elevation',
+                       'DATE': 'date',
+                       'PRCP': 'precip',
+                       'SNOW': 'snow',
+                       'SNWD': 'snow_depth',
+                       'TMAX': 'temp_max',
+                       'TMIN': 'temp_min',
+                       'TAVG': 'temp_avg',
+                       'TOBS': 'temp_obs',
+                       'WESD': 'water_equiv_groundsnow',
+                       'WESF': 'water_equiv_snowfall',
+                       'WT01': 'fog',
+                       'WT03': 'thunder',
+                       'WT04': 'sleet',
+                       'WT05': 'hail',
+                       'WT06': 'rime',
+                       'WT11': 'high_winds'}, inplace=True)
     
-    df['Date'] = [date.fromisoformat(d) for d in df['Date']] # convert str --> datetime
+    df['date'] = pd.to_datetime(df['date']) # convert str --> datetime
 
     # create "WNTR" variable to label winter season (Oct 1st - May 5th)
     wntrs = {
-        '16_17': (date(2016, 10, 1), date(2017, 5, 30)),
-        '17_18': (date(2017, 10, 1), date(2018, 5, 30)),
-        '18_19': (date(2018, 10, 1), date(2019, 5, 30)),
-        '19_20': (date(2019, 10, 1), date(2020, 5, 30)),
-        '20_21': (date(2020, 10, 1), date(2021, 5, 30)),
-        '21_22': (date(2021, 10, 1), date(2022, 5, 30)),
-        '22_23': (date(2022, 10, 1), date(2023, 5, 30)),
-        '23_24': (date(2023, 10, 1), date(2024, 5, 30))
+        '16_17': (pd.Timestamp(2016, 10, 1), pd.Timestamp(2017, 5, 30)),
+        '17_18': (pd.Timestamp(2017, 10, 1), pd.Timestamp(2018, 5, 30)),
+        '18_19': (pd.Timestamp(2018, 10, 1), pd.Timestamp(2019, 5, 30)),
+        '19_20': (pd.Timestamp(2019, 10, 1), pd.Timestamp(2020, 5, 30)),
+        '20_21': (pd.Timestamp(2020, 10, 1), pd.Timestamp(2021, 5, 30)),
+        '21_22': (pd.Timestamp(2021, 10, 1), pd.Timestamp(2022, 5, 30)),
+        '22_23': (pd.Timestamp(2022, 10, 1), pd.Timestamp(2023, 5, 30)),
+        '23_24': (pd.Timestamp(2023, 10, 1), pd.Timestamp(2024, 5, 30))
     }
 
-    df['WNTR'] = np.select(
-        [((df['Date'] >= start) & (df['Date'] <= end)) for start, end in wntrs.values()],
+    df['winter'] = np.select(
+        [((df['date'] >= start) & (df['date'] <= end)) for start, end in wntrs.values()],
         list(wntrs.keys()),
         default = "")
+    
+    station_names = {
+        'ALTA, UT US': 'Alta',
+        'COTTONWOOD HEIGHTS 1.6 SE, UT US': 'CottonwoodHeights',
+        'SILVER LAKE BRIGHTON, UT US': 'SilverLakeBrighton',
+       'SNOWBIRD, UT US': 'Snowbird',
+       'BRIGHTON, UT US': 'Brighton'
+    }
+    df['Name'] = df['Name'].replace(station_names)
 
+    return noaa_to_ts(df)
+
+def clean_forecast_data():
+    df = pd.read_csv('uac_forecasts.csv')
+    df = df.dropna('any', axis=0)
     return df
 
 def noaa_to_ts(df):
+    df.set_index('date', inplace=True)
+    df = df.pivot(columns='Name')
+    df.columns = [f"{station}_{variable}" for (variable, station) in df.columns]
+    df = df.reindex(sorted(df.columns), axis=1)
 
-    # create column duplicates for each station, single dataframe with common date index
-    df_dict = {}
-    for station in df['Name'].unique():
-        station_df = df.loc[df['Station'] == station]
-        station_df = station_df.sort_values(by='Date')
-        station_df.set_index('Date')
-        df_dict[station] = station_df
+    weather_cols = ['Alta_rime', 'Alta_fog', 'Alta_hail', 'Alta_high_winds', 'Alta_sleet', 'Alta_thunder',
+                    'Brighton_rime', 'Brighton_fog', 'Brighton_hail', 'Brighton_high_winds', 'Brighton_sleet', 'Brighton_thunder',
+                    'CottonwoodHeights_rime', 'CottonwoodHeights_fog', 'CottonwoodHeights_hail', 'CottonwoodHeights_high_winds', 'CottonwoodHeights_sleet', 'CottonwoodHeights_thunder',
+                    'SilverLakeBrighton_rime', 'SilverLakeBrighton_fog', 'SilverLakeBrighton_hail', 'SilverLakeBrighton_high_winds', 'SilverLakeBrighton_sleet', 'SilverLakeBrighton_thunder',
+                    'Snowbird_rime', 'Snowbird_fog', 'Snowbird_hail', 'Snowbird_high_winds', 'Snowbird_sleet', 'Snowbird_thunder']
 
-    return df_dict
+    static_cols = ['Alta_latitude', 'Alta_longitude', 'Alta_elevation',
+                'Brighton_latitude', 'Brighton_longitude', 'Brighton_elevation',
+                'CottonwoodHeights_latitude', 'CottonwoodHeights_longitude', 'CottonwoodHeights_elevation',
+                'SilverLakeBrighton_latitude', 'SilverLakeBrighton_longitude', 'SilverLakeBrighton_elevation',
+                'Snowbird_latitude', 'Snowbird_longitude', 'Snowbird_elevation']
+    # handle NA values
+    for col in df.columns:
+        df[col].apply(pd.to_numeric, errors='coerce')
+        if col in weather_cols:
+            df[col] = df[col].fillna(0).astype(int)
+        elif col in static_cols:
+            df[col] = df[col].bfill().ffill()
+        else:
+            df[col] = df[col].fillna(np.nan)
+
+    df.dropna(axis=1, how='all', inplace=True)
+    return df
 
 def uac_to_ts(df):
     
