@@ -8,13 +8,11 @@ from datetime import datetime
 from tqdm import tqdm
 import time
 
-__all__ = ['clean_uac_avalanche_data',
+__all__ = ['clean_avalanche_data',
            'clean_noaa_daily_data',
-           'uac_to_ts',
-           'noaa_to_ts',
            'get_uac_forecast']
 
-def clean_uac_avalanche_data():
+def clean_avalanche_data():
     df = pd.read_csv('data/avalanches.csv') # avalanches.csv
 
     df = df.loc[df['Region'] == 'Salt Lake'] # filter for salt lake regions only
@@ -72,6 +70,8 @@ def clean_uac_avalanche_data():
     # fill NA
     df['Trigger_info'] = df['Trigger_info'].fillna('NA')
     df['Terrain_summary'] = df['Terrain_summary'].fillna('NA')
+
+    df = avalanche_to_ts(df)
     return df
 
 def clean_noaa_daily_data():
@@ -167,8 +167,14 @@ def noaa_to_ts(df):
     df.dropna(axis=1, how='all', inplace=True)
     return df
 
-def uac_to_ts(df):
-    
+def avalanche_to_ts(df):
+    # drop unneccesary cols
+    df.drop(columns=['Place', 'Trigger', 'Trigger_info', 'WeakLayer',
+                     'Caught', 'Carried', 'Buried_partly', 'Buried_fully',
+                     'Injured', 'Killed', 'Terrain_summary', 'Depth', 'Width',
+                     'Vertical', 'Aspect'],
+            axis=1, inplace=True)
+    df.set_index('Date', inplace=True)
     return df
 
 def get_uac_forecast():
